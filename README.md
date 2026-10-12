@@ -1,4 +1,5 @@
-<h1 align="center">✅ Daily Tasks</h1>
+<h1 align="center">✅ TaskSync</h1>
+<h3 align="center">Real-Time Full-Stack Task Manager</h3>
 
 <p align="center">
   A full-stack personal task manager for your laptop and phone — built with <b>FastAPI</b>, <b>PostgreSQL</b>, <b>JWT authentication</b>, <b>real-time WebSocket sync</b>, and an <b>installable PWA</b> frontend.
@@ -49,6 +50,8 @@
 
 ## 🛠️ Tech Stack
 
+> **Backend:** Python (FastAPI) · **Frontend:** JavaScript, HTML, CSS — GitHub's language bar shows both because this is a full-stack project.
+
 | Layer | Technology |
 |---|---|
 | Language | Python 3.13 (works on 3.10+) |
@@ -89,7 +92,7 @@ flowchart TD
 ## 📁 Project Structure
 
 ```
-daily-tasks/
+tasksync/
 ├── .env.example          # Template for environment variables (no secrets)
 ├── .gitignore
 ├── requirements.txt      # Pinned Python dependencies
@@ -121,8 +124,8 @@ daily-tasks/
 
 ### 1. Clone and install
 ```bash
-git clone https://github.com/AnshulHR26/daily-tasks.git
-cd daily-tasks
+git clone https://github.com/AnshulHR26/tasksync.git
+cd tasksync
 python -m venv venv
 
 # Windows (PowerShell)
