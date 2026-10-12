@@ -1,6 +1,6 @@
 // Caches only the app's own page, styles, script and icons so it opens fast.
 // Task data (/tasks, /auth, /users, /ws) always goes to the server and is never cached.
-const CACHE = "daily-tasks-v1";
+const CACHE = "daily-tasks-v2";
 const SHELL = [
   "/",
   "/static/styles.css",

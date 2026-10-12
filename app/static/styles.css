@@ -127,6 +127,8 @@ label { display: grid; gap: 6px; font-size: 13px; font-weight: 600; color: var(-
 .btn:disabled { opacity: .6; cursor: default; }
 .btn.primary { background: var(--primary); color: var(--on-primary); }
 .btn.primary:hover:not(:disabled) { background: var(--primary-hover); }
+.btn.danger { background: var(--danger); color: #fff; }
+.btn.danger:hover:not(:disabled) { filter: brightness(1.08); }
 .btn.ghost { background: transparent; border-color: var(--border); }
 .btn.ghost:hover { background: var(--surface-2); }
 .btn.block { width: 100%; padding: 11px; }

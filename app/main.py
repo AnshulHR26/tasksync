@@ -5,22 +5,24 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import (
-    FastAPI, Depends, HTTPException, Query, BackgroundTasks, WebSocket, WebSocketDisconnect,
+    FastAPI, Depends, HTTPException, Query, BackgroundTasks, Request, WebSocket, WebSocketDisconnect,
 )
 from fastapi.responses import FileResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.staticfiles import StaticFiles
-from sqlalchemy import select, or_, inspect, text
+from sqlalchemy import select, or_, inspect, text, func
 from sqlalchemy.orm import Session
 
 from . import models, schemas, security
 from .database import engine, get_db, SessionLocal
+from .ratelimit import client_ip, login_per_email, login_per_ip, register_per_ip
 from .realtime import manager
 
 STATIC_DIR = Path(__file__).parent / "static"
 
-# Set ALLOW_REGISTRATION=false in .env once your own account exists, so nobody else can sign up.
+# Set ALLOW_REGISTRATION=false to stop new sign-ups (for a private, single-user install).
 ALLOW_REGISTRATION = os.getenv("ALLOW_REGISTRATION", "true").strip().lower() in ("1", "true", "yes")
+MAX_TASKS_PER_USER = int(os.getenv("MAX_TASKS_PER_USER", "5000"))
 
 # Columns added after the first version. Existing databases get them on startup.
 NEW_TASK_COLUMNS = {
@@ -69,6 +71,13 @@ def web_manifest():
     return FileResponse(STATIC_DIR / "manifest.webmanifest", media_type="application/manifest+json")
 
 
+# Hosting platforms call this to check the app and its database are up.
+@app.get("/health", include_in_schema=False)
+def health(db: Session = Depends(get_db)):
+    db.execute(text("SELECT 1"))
+    return {"status": "ok"}
+
+
 # ---------- Auth ----------
 @app.get("/auth/config", tags=["Auth"])
 def auth_config():
@@ -76,9 +85,10 @@ def auth_config():
 
 
 @app.post("/auth/register", response_model=schemas.UserOut, status_code=201, tags=["Auth"])
-def register(data: schemas.UserCreate, db: Session = Depends(get_db)):
+def register(data: schemas.UserCreate, request: Request, db: Session = Depends(get_db)):
     if not ALLOW_REGISTRATION:
         raise HTTPException(status_code=403, detail="New sign-ups are turned off")
+    register_per_ip.check(client_ip(request))
     email = data.email.lower()
     existing = db.scalar(select(models.User).where(models.User.email == email))
     if existing:
@@ -92,9 +102,17 @@ def register(data: schemas.UserCreate, db: Session = Depends(get_db)):
 
 
 @app.post("/auth/login", response_model=schemas.Token, tags=["Auth"])
-def login(form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    user = db.scalar(select(models.User).where(models.User.email == form.username.lower()))
-    if not user or not security.verify_password(form.password, user.hashed_password):
+def login(
+    request: Request,
+    form: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db),
+):
+    email = form.username.strip().lower()
+    login_per_ip.check(client_ip(request))
+    login_per_email.check(email)
+    user = db.scalar(select(models.User).where(models.User.email == email))
+    hashed = user.hashed_password if user else security.DUMMY_HASH
+    if not security.verify_password(form.password, hashed) or user is None:
         raise HTTPException(status_code=401, detail="Incorrect email or password")
     return schemas.Token(access_token=security.create_access_token(user.id))
 
@@ -116,6 +134,19 @@ def change_password(
     db.commit()
 
 
+@app.delete("/users/me", status_code=204, tags=["Users"])
+def delete_account(
+    data: schemas.AccountDelete,
+    db: Session = Depends(get_db),
+    user: models.User = Depends(security.get_current_user),
+):
+    """Permanently deletes the account and all of its tasks."""
+    if not security.verify_password(data.password, user.hashed_password):
+        raise HTTPException(status_code=400, detail="Password is incorrect")
+    db.delete(user)
+    db.commit()
+
+
 # ---------- Tasks ----------
 def get_own_task(task_id: int, db: Session, user: models.User) -> models.Task:
     task = db.get(models.Task, task_id)
@@ -131,6 +162,9 @@ def create_task(
     db: Session = Depends(get_db),
     user: models.User = Depends(security.get_current_user),
 ):
+    count = db.scalar(select(func.count()).select_from(models.Task).where(models.Task.owner_id == user.id))
+    if count >= MAX_TASKS_PER_USER:
+        raise HTTPException(status_code=400, detail=f"Task limit reached ({MAX_TASKS_PER_USER}). Delete old tasks first.")
     task = models.Task(**data.model_dump(), owner_id=user.id)
     db.add(task)
     db.commit()

@@ -29,7 +29,9 @@
 - Register and log in with email and password
 - Passwords stored only as **bcrypt** hashes
 - **JWT** access tokens (OAuth2 password flow), valid 7 days by default
-- Change password from the user menu
+- Change password and **delete account** (removes all of that user's tasks) from the user menu
+- **Rate limiting** on login and sign-up to stop password guessing and spam accounts
+- Refuses to start in production without a strong `SECRET_KEY`
 - Config switch to turn off new sign-ups
 
 **📝 Tasks**
@@ -65,7 +67,8 @@
 | Config | python-dotenv (`.env`) |
 | Frontend | Plain HTML, CSS and JavaScript — no build step, no Node.js |
 | PWA | Web app manifest + service worker |
-| Remote access | Tailscale private network |
+| Hosting | Render (Blueprint: web service + managed PostgreSQL) |
+| Remote access (optional) | Tailscale private network |
 
 ---
 
@@ -95,7 +98,10 @@ flowchart TD
 tasksync/
 ├── .env.example          # Template for environment variables (no secrets)
 ├── .gitignore
+├── .python-version       # Python version for cloud hosts
 ├── requirements.txt      # Pinned Python dependencies
+├── render.yaml           # Render Blueprint: one-click cloud deploy
+├── Procfile              # Start command for Railway / Heroku-style hosts
 ├── start.bat             # Windows: start the server and open the browser
 └── app/
     ├── __init__.py
@@ -103,6 +109,7 @@ tasksync/
     ├── models.py         # Tables: users, tasks
     ├── schemas.py        # Request/response models and validation
     ├── security.py       # Password hashing, JWT create/verify, current user
+    ├── ratelimit.py      # Login and sign-up rate limits
     ├── realtime.py       # WebSocket connection manager
     ├── main.py           # API endpoints, UI routes, schema upgrades
     └── static/
@@ -152,8 +159,10 @@ cp .env.example .env      # Windows: Copy-Item .env.example .env
 | `SECRET_KEY` | Signs JWTs — long and random | `python -c "import secrets; print(secrets.token_urlsafe(48))"` |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | Login lifetime | `10080` (7 days) |
 | `ALLOW_REGISTRATION` | Allow new sign-ups | `true` |
+| `APP_ENV` | `production` refuses to start without a strong `SECRET_KEY` | `development` |
+| `MAX_TASKS_PER_USER` | Per-account task limit | `5000` |
 
-Tables are created automatically on first start.
+`DATABASE_URL` also accepts the `postgres://` and `postgresql://` URLs that cloud hosts provide. Tables are created automatically on first start.
 
 ### 4. Run
 ```bash
@@ -181,12 +190,16 @@ Task and user endpoints require `Authorization: Bearer <token>`.
 | `POST` | `/auth/login` | OAuth2 form login → `{access_token, token_type}` |
 | `GET` | `/users/me` | Current user |
 | `POST` | `/users/me/password` | Change password → 204 |
+| `DELETE` | `/users/me` | Delete account and all its tasks `{password}` → 204 |
 | `POST` | `/tasks` | Create task → 201 |
 | `GET` | `/tasks` | List tasks — filters: `completed`, `priority`, `q`, `skip`, `limit` |
 | `GET` | `/tasks/{id}` | Get one task |
 | `PATCH` | `/tasks/{id}` | Update any field (`null` clears due date) |
 | `DELETE` | `/tasks/{id}` | Delete task → 204 |
 | `WS` | `/ws` | Real-time events: `created` / `updated` / `deleted` |
+| `GET` | `/health` | Health check (app + database) |
+
+Too many login or sign-up attempts return `429` with a `Retry-After` header.
 
 <details>
 <summary><b>Example task object</b></summary>
@@ -228,13 +241,26 @@ On startup the app creates missing tables and adds any new columns to existing t
 
 ## 🧪 Testing
 
-Verified scenarios against PostgreSQL include: registration, duplicate email (400), login, wrong password (401), missing token (401), pagination, filters, `completed_at` handling, clearing due dates, invalid priority (422), delete (204), **access to another user's task (404)**, password change, WebSocket push, **no cross-user push**, bad WebSocket token (4401), and sign-ups disabled (403).
+Verified scenarios against PostgreSQL include: registration, duplicate email (400), login, wrong password (401), missing token (401), pagination, filters, `completed_at` handling, clearing due dates, invalid priority (422), delete (204), **access to another user's task (404)**, password change, WebSocket push, **no cross-user push**, bad WebSocket token (4401), sign-ups disabled (403), account deletion (tasks and login removed), login brute force and sign-up flood limits (429), health check, and production `SECRET_KEY` enforcement.
 
 ---
 
-## 📱 Use It on Your Phone
+## ☁️ Deploy to the Cloud
 
-The app can be shared privately to your own devices with [Tailscale](https://tailscale.com) — no public exposure or port forwarding:
+Run it online so anyone with the link can sign up and manage their own tasks from any phone, with no laptop needed. The included [`render.yaml`](./render.yaml) creates the web service **and** a PostgreSQL database, and generates a random `SECRET_KEY`.
+
+1. Sign in to [Render](https://render.com) with GitHub.
+2. **New → Blueprint** → select this repository → **Apply**.
+3. After the first deploy (about 3–5 minutes) the app is live at `https://daily-tasks-xxxx.onrender.com`.
+4. Share the link. Each person taps **Create account**, then **Add to Home Screen** to install it.
+
+**Free-tier notes:** the free web service sleeps after 15 minutes idle (the next visit takes about a minute), and Render's free PostgreSQL expires after 30 days. For a lasting free database, create one on [Neon](https://neon.tech) and set its connection string as `DATABASE_URL` in the service's Environment settings.
+
+---
+
+## 📱 Use It on Your Phone (private, from your own PC)
+
+Alternatively, share a locally running app with only your own devices using [Tailscale](https://tailscale.com), with no public exposure or port forwarding:
 
 ```bash
 tailscale serve --bg 8000
@@ -249,8 +275,9 @@ Open that URL on your phone (with Tailscale on) and choose **Add to Home Screen*
 
 - `.env` is git-ignored — never commit secrets
 - Use a long random `SECRET_KEY`
-- Set `ALLOW_REGISTRATION=false` after creating your account
-- Share remotely only via Tailscale; don't port-forward 8000
+- For a private single-user install, set `ALLOW_REGISTRATION=false` after creating your account
+- On a public deployment, set `APP_ENV=production` (done automatically by `render.yaml`)
+- For a local install, share remotely only via Tailscale; don't port-forward 8000
 
 ---
 
@@ -261,7 +288,8 @@ Open that URL on your phone (with Tailscale on) and choose **Add to Home Screen*
 - [ ] Database migrations with Alembic
 - [ ] Automated test suite with pytest + GitHub Actions CI
 - [ ] Docker setup
-- [ ] Cloud deployment (Render / Railway) with managed PostgreSQL
+- [x] Cloud deployment config (Render Blueprint) with managed PostgreSQL
+- [ ] Password reset by email
 
 ---
 

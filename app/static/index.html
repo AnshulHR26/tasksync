@@ -62,6 +62,7 @@
             <div id="user-email" class="menu-email"></div>
             <button id="pw-btn" type="button">Change password</button>
             <button id="logout-btn" type="button">Log out</button>
+            <button id="delete-account-btn" type="button" class="danger-text">Delete account</button>
           </div>
         </div>
       </div>
@@ -188,6 +189,23 @@
         <span class="spacer"></span>
         <button type="button" class="btn ghost" data-close>Cancel</button>
         <button type="submit" class="btn primary">Update password</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- ========== Delete account ========== -->
+  <dialog id="del-dialog" aria-labelledby="del-heading">
+    <form id="del-form" class="dialog-body">
+      <h2 id="del-heading">Delete your account?</h2>
+      <p class="muted">This permanently deletes your account and <strong>all of your tasks</strong>. It can't be undone.</p>
+      <label>Enter your password to confirm
+        <input type="password" id="del-password" required autocomplete="current-password">
+      </label>
+      <p id="del-error" class="form-error" role="alert" hidden></p>
+      <div class="dialog-actions">
+        <span class="spacer"></span>
+        <button type="button" class="btn ghost" data-close>Cancel</button>
+        <button type="submit" class="btn danger">Delete account</button>
       </div>
     </form>
   </dialog>

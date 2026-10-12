@@ -13,7 +13,11 @@ from .database import get_db
 
 load_dotenv()
 
-SECRET_KEY = os.getenv("SECRET_KEY", "dev-only-change-this-in-production")
+DEFAULT_SECRET = "dev-only-change-this-in-production"
+SECRET_KEY = os.getenv("SECRET_KEY", DEFAULT_SECRET)
+IS_PRODUCTION = os.getenv("APP_ENV", "").lower() == "production"
+if IS_PRODUCTION and (SECRET_KEY == DEFAULT_SECRET or len(SECRET_KEY) < 32):
+    raise RuntimeError("Set a long random SECRET_KEY before running in production")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
 
@@ -26,6 +30,11 @@ def hash_password(password: str) -> str:
 
 def verify_password(password: str, hashed: str) -> bool:
     return bcrypt.checkpw(password.encode(), hashed.encode())
+
+
+# Used when an email doesn't exist, so a failed login takes the same time either way
+# and can't be used to discover which emails are registered.
+DUMMY_HASH = hash_password("not-a-real-password")
 
 
 def create_access_token(user_id: int) -> str:

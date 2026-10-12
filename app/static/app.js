@@ -252,6 +252,27 @@ $("#pw-form").addEventListener("submit", async (e) => {
   }
 });
 
+$("#delete-account-btn").addEventListener("click", () => {
+  $("#user-menu").hidden = true;
+  $("#del-form").reset();
+  $("#del-error").hidden = true;
+  $("#del-dialog").showModal();
+});
+
+$("#del-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const err = $("#del-error");
+  try {
+    await api("/users/me", { method: "DELETE", body: { password: $("#del-password").value } });
+    $("#del-dialog").close();
+    logout();
+    toast("Your account and tasks were deleted.");
+  } catch (ex) {
+    err.textContent = ex.message;
+    err.hidden = false;
+  }
+});
+
 $$("dialog [data-close]").forEach((b) => b.addEventListener("click", () => b.closest("dialog").close()));
 $$("dialog").forEach((d) => d.addEventListener("click", (e) => { if (e.target === d) d.close(); }));
 
