@@ -5,6 +5,8 @@
   A full-stack personal task manager for your laptop and phone — built with <b>FastAPI</b>, <b>PostgreSQL</b>, <b>JWT authentication</b>, <b>real-time WebSocket sync</b>, and an <b>installable PWA</b> frontend.
 </p>
 
+<p align="center"><a href="https://daily-tasks-onb4.onrender.com"><b>🌐 Live Demo</b></a> · <a href="SETUP.md"><b>📘 Setup Guide</b></a></p>
+
 <p align="center">
   <img src="https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white" alt="FastAPI">
@@ -124,6 +126,8 @@ tasksync/
 ---
 
 ## 🚀 Getting Started
+
+> 📘 **Full setup guide:** deployment to Render, phone install, API reference and troubleshooting are in [SETUP.md](SETUP.md).
 
 ### Prerequisites
 - Python 3.10+
