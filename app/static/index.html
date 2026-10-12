@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#4f5bd5">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Tasks">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
+  <title>Daily Tasks</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234f5bd5'/%3E%3Cpath d='M9 16.5l4.5 4.5L23 11.5' stroke='white' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <!-- ========== Login / Register ========== -->
+  <main id="auth-view" class="auth" hidden>
+    <div class="auth-card">
+      <div class="brand brand-lg"><span class="logo" aria-hidden="true"></span>Daily Tasks</div>
+      <p class="muted">Plan your day. Get things done.</p>
+
+      <div class="seg" role="tablist">
+        <button type="button" role="tab" data-mode="login" class="active">Log in</button>
+        <button type="button" role="tab" data-mode="register">Create account</button>
+      </div>
+
+      <form id="auth-form" novalidate>
+        <label>Email
+          <input type="email" id="auth-email" required autocomplete="username" placeholder="you@example.com">
+        </label>
+        <label>Password
+          <input type="password" id="auth-password" required minlength="8" maxlength="72"
+                 autocomplete="current-password" placeholder="At least 8 characters">
+        </label>
+        <p id="auth-error" class="form-error" role="alert" hidden></p>
+        <button class="btn primary block" id="auth-submit" type="submit">Log in</button>
+      </form>
+    </div>
+  </main>
+
+  <!-- ========== Main app ========== -->
+  <div id="app-view" class="app" hidden>
+    <header class="topbar">
+      <div class="brand"><span class="logo" aria-hidden="true"></span><span class="brand-text">Daily Tasks</span></div>
+      <div class="search">
+        <input id="search" type="search" placeholder="Search tasks" aria-label="Search tasks">
+        <kbd>/</kbd>
+      </div>
+      <div class="top-actions">
+        <span id="live" class="live" title="Real-time sync status">
+          <span class="dot"></span><span class="live-text">Connecting</span>
+        </span>
+        <button id="theme-btn" class="icon-btn" type="button" title="Toggle light / dark" aria-label="Toggle theme">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.39 5.39 0 0 1-4.4 2.26 5.4 5.4 0 0 1-3.14-9.8c-.44-.06-.9-.1-1.36-.1z"/></svg>
+        </button>
+        <div class="menu">
+          <button id="user-btn" class="avatar" type="button" aria-haspopup="true" aria-expanded="false">?</button>
+          <div id="user-menu" class="menu-pop" hidden>
+            <div id="user-email" class="menu-email"></div>
+            <button id="pw-btn" type="button">Change password</button>
+            <button id="logout-btn" type="button">Log out</button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="layout">
+      <nav class="sidebar" aria-label="Views">
+        <button class="nav-item active" data-view="today" type="button">
+          <span class="nav-ico" aria-hidden="true">☀</span><span>Today</span><span class="count" id="count-today"></span>
+        </button>
+        <button class="nav-item" data-view="upcoming" type="button">
+          <span class="nav-ico" aria-hidden="true">▦</span><span>Upcoming</span><span class="count" id="count-upcoming"></span>
+        </button>
+        <button class="nav-item" data-view="all" type="button">
+          <span class="nav-ico" aria-hidden="true">☰</span><span>All open</span><span class="count" id="count-all"></span>
+        </button>
+        <button class="nav-item" data-view="completed" type="button">
+          <span class="nav-ico" aria-hidden="true">✓</span><span>Completed</span><span class="count" id="count-completed"></span>
+        </button>
+
+        <div class="nav-label">Priority</div>
+        <div class="chips" id="priority-chips">
+          <button type="button" class="chip active" data-priority="all">All</button>
+          <button type="button" class="chip" data-priority="high"><span class="pdot high"></span>High</button>
+          <button type="button" class="chip" data-priority="medium"><span class="pdot medium"></span>Medium</button>
+          <button type="button" class="chip" data-priority="low"><span class="pdot low"></span>Low</button>
+        </div>
+
+        <div class="shortcuts muted">
+          <div><kbd>N</kbd> new task</div>
+          <div><kbd>/</kbd> search</div>
+        </div>
+      </nav>
+
+      <main class="content">
+        <div class="view-head">
+          <h1 id="view-title">Today</h1>
+          <p id="view-sub" class="muted"></p>
+        </div>
+
+        <section class="progress-card" aria-live="polite">
+          <div class="progress-text">
+            <strong id="progress-label"></strong>
+            <span id="progress-pct" class="muted"></span>
+          </div>
+          <div class="bar"><div id="progress-fill"></div></div>
+        </section>
+
+        <form id="add-form" class="add-card" autocomplete="off">
+          <input id="add-title" placeholder="Add a task…" maxlength="200" aria-label="Task title">
+          <textarea id="add-desc" placeholder="Notes (optional)" maxlength="1000" rows="2" hidden aria-label="Task notes"></textarea>
+          <div class="add-row">
+            <label class="field-inline" title="Due date">
+              <span class="sr-only">Due date</span>
+              <input type="date" id="add-due">
+            </label>
+            <label class="field-inline" title="Priority">
+              <span class="sr-only">Priority</span>
+              <select id="add-priority">
+                <option value="high">High priority</option>
+                <option value="medium" selected>Medium priority</option>
+                <option value="low">Low priority</option>
+              </select>
+            </label>
+            <button type="button" id="add-notes-btn" class="btn ghost">+ Notes</button>
+            <span class="spacer"></span>
+            <button class="btn primary" type="submit" id="add-submit">Add task</button>
+          </div>
+        </form>
+
+        <div id="list" class="list"></div>
+        <div id="empty" class="empty" hidden></div>
+        <div id="completed-actions" class="list-footer" hidden>
+          <button type="button" id="clear-completed" class="btn ghost danger-text">Delete all completed</button>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- ========== Edit task ========== -->
+  <dialog id="edit-dialog" aria-labelledby="edit-heading">
+    <form id="edit-form" class="dialog-body">
+      <h2 id="edit-heading">Edit task</h2>
+      <label>Title
+        <input id="edit-title" required maxlength="200">
+      </label>
+      <label>Notes
+        <textarea id="edit-desc" maxlength="1000" rows="4"></textarea>
+      </label>
+      <div class="two-col">
+        <label>Due date
+          <input type="date" id="edit-due">
+        </label>
+        <label>Priority
+          <select id="edit-priority">
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+          </select>
+        </label>
+      </div>
+      <p class="muted small" id="edit-meta"></p>
+      <div class="dialog-actions">
+        <button type="button" class="btn ghost danger-text" id="edit-delete">Delete</button>
+        <span class="spacer"></span>
+        <button type="button" class="btn ghost" data-close>Cancel</button>
+        <button type="submit" class="btn primary">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- ========== Change password ========== -->
+  <dialog id="pw-dialog" aria-labelledby="pw-heading">
+    <form id="pw-form" class="dialog-body">
+      <h2 id="pw-heading">Change password</h2>
+      <label>Current password
+        <input type="password" id="pw-current" required autocomplete="current-password">
+      </label>
+      <label>New password
+        <input type="password" id="pw-new" required minlength="8" maxlength="72" autocomplete="new-password">
+      </label>
+      <p id="pw-error" class="form-error" role="alert" hidden></p>
+      <div class="dialog-actions">
+        <span class="spacer"></span>
+        <button type="button" class="btn ghost" data-close>Cancel</button>
+        <button type="submit" class="btn primary">Update password</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
