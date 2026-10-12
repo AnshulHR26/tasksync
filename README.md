@@ -21,7 +21,9 @@
 
 ## 📸 Screenshots
 
-> _Add screenshots here — e.g. `docs/screenshots/desktop.png`, `docs/screenshots/mobile.png`, `docs/screenshots/dark-mode.png`._
+| Light mode | Dark mode |
+|---|---|
+| ![TaskSync Today view in light mode](docs/screenshots/desktop.jpg) | ![TaskSync All open view in dark mode](docs/screenshots/dark-mode.jpg) |
 
 ---
 
