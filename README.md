@@ -251,7 +251,7 @@ Run it online so anyone with the link can sign up and manage their own tasks fro
 
 1. Sign in to [Render](https://render.com) with GitHub.
 2. **New → Blueprint** → select this repository → **Apply**.
-3. After the first deploy (about 3–5 minutes) the app is live at `https://daily-tasks-xxxx.onrender.com`.
+3. After the first deploy (about 3–5 minutes) the app is live at `https://daily-tasks-xxxx.onrender.com` (the service name comes from `render.yaml`; the app's screens are titled "Daily Tasks").
 4. Share the link. Each person taps **Create account**, then **Add to Home Screen** to install it.
 
 **Free-tier notes:** the free web service sleeps after 15 minutes idle (the next visit takes about a minute), and Render's free PostgreSQL expires after 30 days. For a lasting free database, create one on [Neon](https://neon.tech) and set its connection string as `DATABASE_URL` in the service's Environment settings.
